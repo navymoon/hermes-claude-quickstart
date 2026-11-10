@@ -59,4 +59,4 @@ ALLOWED="$(get_profile_env SLACK_ALLOWED_USERS)"
 case ",$ALLOWED," in *",$MEMBER_ID,"*) ;; *) set_profile_env SLACK_ALLOWED_USERS "${ALLOWED:+$ALLOWED,}$MEMBER_ID";; esac
 ok "허용 사용자: $(get_profile_env SLACK_ALLOWED_USERS)"
 
-hermes gateway restart </dev/null && ok "게이트웨이 재시작 — 새 워크스페이스에서 봇에게 DM 보내 보세요."
+hermes -p "$QS_PROFILE" gateway restart </dev/null && ok "게이트웨이 재시작 — 새 워크스페이스에서 봇에게 DM 보내 보세요."

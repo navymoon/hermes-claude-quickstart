@@ -20,5 +20,5 @@ chk "허용 사용자 설정 ($(get_profile_env SLACK_ALLOWED_USERS))" "[ -n \"\
 chk "Hindsight 서버 (127.0.0.1:${QS_HINDSIGHT_PORT:-8888})" "curl -fsS -m 5 http://127.0.0.1:${QS_HINDSIGHT_PORT:-8888}/health"
 chk "프로필 '$QS_PROFILE' 모델=Claude 구독" "grep -q 'provider: claude-subscription-directsdk' $HOME/.hermes/profiles/$QS_PROFILE/config.yaml"
 chk "프로필 기억=Hindsight 뱅크 '$QS_PROFILE'" "grep -q '\"bank_id\": \"$QS_PROFILE\"' $HOME/.hermes/profiles/$QS_PROFILE/hindsight/config.json"
-chk "게이트웨이 실행 중" "hermes gateway status 2>&1 | grep -qiE 'running|served'"
+chk "게이트웨이 실행 중" "hermes -p $QS_PROFILE gateway status 2>&1 | grep -qiE 'running|served'"
 exit "$FAIL"

@@ -119,7 +119,8 @@ if ! uv tool list 2>/dev/null | grep -q "^hindsight-api v$HINDSIGHT_VERSION"; th
   uv tool install --force --python 3.13 "hindsight-api==$HINDSIGHT_VERSION" --with claude-agent-sdk
 fi
 install_hindsight_service "$HINDSIGHT_PORT"
-wait_http "http://127.0.0.1:$HINDSIGHT_PORT/health" 180 || die "Hindsight가 뜨지 않습니다: $STATE_DIR/logs/hindsight.log"
+info "첫 실행은 기억용 모델/DB 내려받느라 몇 분 걸릴 수 있습니다"
+wait_http "http://127.0.0.1:$HINDSIGHT_PORT/health" 900 || die "Hindsight가 뜨지 않습니다: $STATE_DIR/logs/hindsight.log"
 ok "Hindsight 실행 중 (127.0.0.1:$HINDSIGHT_PORT, 재부팅 시 자동 시작)"
 
 # ── 5. Hermes 프로필 ─────────────────────────────────────────────────────────
@@ -188,9 +189,9 @@ info "다른 워크스페이스에도 같은 봇을 붙이려면 나중에: ./bi
 
 # ── 7. 게이트웨이(상시 실행) ────────────────────────────────────────────────
 step "7/8 게이트웨이 상시 실행 (로그인 시 자동 시작)"
-hermes gateway install --start-now --start-on-login </dev/null || hermes gateway restart </dev/null || true
+hp gateway install --start-now --start-on-login </dev/null || hp gateway restart </dev/null || true
 sleep 5
-hermes gateway status 2>&1 | head -5 || true
+hp gateway status 2>&1 | head -5 || true
 
 # ── 8. 점검 ─────────────────────────────────────────────────────────────────
 step "8/8 점검"
