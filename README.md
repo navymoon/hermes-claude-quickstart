@@ -24,7 +24,9 @@ cd hermes-claude-quickstart
 ./install.sh
 ```
 
-설치 스크립트가 단계별로 묻는 것에 답하면 됩니다. 중간에 끊겨도 `./install.sh`를 다시 실행하면 끝난 단계는 건너뛰고 이어서 진행합니다.
+**Claude Code에 맡기기:** Claude Code에서 "https://github.com/navymoon/hermes-claude-quickstart 설치해줘"라고 하면 됩니다. 자동으로 할 수 있는 단계는 Claude Code가 진행합니다(`CLAUDE.md` 참고). 로그인, Slack 앱 생성, 토큰 입력처럼 사람이 해야 하는 단계에서는 멈추고 무엇을 해야 하는지 알려 줍니다. 토큰 같은 비밀값은 채팅에 붙여넣지 마세요. 터미널에서 `./install.sh`를 실행해 직접 입력합니다.
+
+직접 할 때는 설치 스크립트가 단계별로 묻는 것에 답하면 됩니다. 중간에 끊겨도 `./install.sh`를 다시 실행하면 끝난 단계는 건너뛰고 이어서 진행합니다.
 
 | 단계 | 하는 일 | 내가 할 일 |
 |---|---|---|

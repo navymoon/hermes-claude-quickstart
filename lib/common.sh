@@ -11,12 +11,31 @@ die()  { printf '  %s %s\n' "$(c 31 ✗)" "$*" >&2; exit 1; }
 STATE_DIR="${STATE_DIR:-$HOME/.hermes-quickstart}"
 STATE_FILE="${STATE_FILE:-$STATE_DIR/state.env}"
 
-ask() {  # ask VAR "prompt"
+# Interactive terminal available? False inside AI agents (Claude Code sets CLAUDECODE=1) or when
+# QS_NONINTERACTIVE=1 — then steps that need a human stop with clear instructions instead of hanging.
+has_tty() { [ -z "${CLAUDECODE:-}${QS_NONINTERACTIVE:-}" ] && { : </dev/tty; } 2>/dev/null; }
+need_human() {  # need_human "what the person must do" — exits 3 so an agent can relay it
+  cat >&2 <<EOF
+
+  ┌─ 사람이 직접 해야 하는 단계 (USER ACTION REQUIRED) ─────────────────────
+$(printf '%s\n' "$@" | sed 's/^/  │ /')
+  │
+  │ 끝나면 터미널(Terminal.app)에서 이어서 실행:  cd "$QS_DIR" && ./install.sh
+  └──────────────────────────────────────────────────────────────────────────
+EOF
+  exit 3
+}
+
+ask() {  # ask VAR "prompt"   (non-secret; an env var of the same name skips the prompt)
+  [ -n "${!1:-}" ] && return 0
+  has_tty || need_human "입력 필요: $2" "(에이전트라면 환경변수 $1=… 로 넘겨도 됩니다. 비밀값이 아닌 경우만)"
   local __v; read -r -p "  ? $2: " __v </dev/tty
   [ -n "$__v" ] || die "값이 비어 있습니다"
   printf -v "$1" '%s' "$__v"
 }
-read_secret() {  # read_secret VAR "prompt"  (no echo, never stored outside Infisical)
+read_secret() {  # read_secret VAR "prompt"  (no echo, never stored outside Infisical; never via env/agent)
+  has_tty || need_human "비밀값 입력 단계입니다: $2" \
+    "비밀값은 AI 채팅에 붙여넣지 말고 터미널에서 직접 입력하세요."
   local __v; read -r -s -p "  ? $2 (입력 내용은 화면에 안 보임): " __v </dev/tty; echo
   [ -n "$__v" ] || die "값이 비어 있습니다"
   printf -v "$1" '%s' "$__v"

@@ -24,8 +24,13 @@ export PATH="$HOME/.local/bin:$PATH"
 mkdir -p "$STATE_DIR/bin" "$STATE_DIR/logs"
 chmod 700 "$STATE_DIR"
 touch "$STATE_FILE"; chmod 600 "$STATE_FILE"
+# Saved progress fills in anything not given on the command line (explicit env vars win).
+_ENV_OVERRIDES="$(env | grep -E '^QS_[A-Z_]+=' | sed 's/=.*//' || true)"
+_saved_env() { local k; for k in $_ENV_OVERRIDES; do printf '%s=%q\n' "$k" "${!k}"; done; }
+_ENV_SNAPSHOT="$(_saved_env)"
 # shellcheck disable=SC1090
 . "$STATE_FILE"
+eval "$_ENV_SNAPSHOT"
 
 [ "$(uname -s)" = Darwin ] || die "macOS 전용입니다."
 [ "$(uname -m)" = arm64 ] || die "Apple Silicon(arm64) Mac 전용입니다."
@@ -40,10 +45,11 @@ if [ -z "${QS_PROFILE:-}" ]; then
   done
   save_state QS_PROFILE "$QS_PROFILE"
 fi
-if [ -z "${QS_BOT_NAME:-}" ]; then
-  ask QS_BOT_NAME "Slack에 보일 봇 이름 (예: Luna)"
-  save_state QS_BOT_NAME "$QS_BOT_NAME"
-fi
+[[ "$QS_PROFILE" =~ ^[a-z0-9][a-z0-9-]{0,30}$ ]] && [ "$QS_PROFILE" != default ] \
+  || die "프로필 이름 '$QS_PROFILE' 사용 불가 (영문 소문자/숫자/-, 32자 이하, default 제외)"
+save_state QS_PROFILE "$QS_PROFILE"
+[ -n "${QS_BOT_NAME:-}" ] || ask QS_BOT_NAME "Slack에 보일 봇 이름 (예: Luna)"
+save_state QS_BOT_NAME "$QS_BOT_NAME"
 ok "프로필: $QS_PROFILE / 봇 이름: $QS_BOT_NAME"
 
 # ── 1. Hermes ────────────────────────────────────────────────────────────────
@@ -63,6 +69,7 @@ if ! command -v claude >/dev/null 2>&1; then
 fi
 command -v claude >/dev/null 2>&1 || die "claude 설치 실패"
 if ! claude_logged_in; then
+  has_tty || need_human "Claude 로그인: 터미널에서 'claude auth login' 실행 → 브라우저에서 본인 Pro/Max 계정으로 로그인"
   info "브라우저가 열리면 '본인' Claude 계정(Pro/Max)으로 로그인하세요."
   claude auth login
 fi
@@ -76,11 +83,16 @@ if ! command -v infisical >/dev/null 2>&1; then
 fi
 ok "$(infisical --version 2>/dev/null)"
 if ! infisical_logged_in; then
+  has_tty || need_human "Infisical 로그인:" \
+    "  1) https://app.infisical.com 가입(무료)" \
+    "  2) 터미널에서 'infisical login' 실행 → 브라우저 로그인"
   info "Infisical 계정이 없으면 https://app.infisical.com 에서 먼저 가입하세요(무료)."
   infisical login
 fi
 infisical_logged_in || die "Infisical 로그인이 확인되지 않습니다."
 if [ -z "${QS_INFISICAL_PROJECT_ID:-}" ]; then
+  has_tty || need_human "Infisical 웹(https://app.infisical.com)에서 프로젝트 'hermes-$QS_PROFILE' 생성 → Settings → Copy Project ID" \
+    "(Project ID는 비밀값이 아님: 에이전트에게 알려 주면 QS_INFISICAL_PROJECT_ID=… 로 이어서 실행)"
   cat <<EOF
 
   Infisical 웹(https://app.infisical.com)에서:
@@ -88,8 +100,8 @@ if [ -z "${QS_INFISICAL_PROJECT_ID:-}" ]; then
     2) 프로젝트 → Settings → 'Copy Project ID'
 EOF
   ask QS_INFISICAL_PROJECT_ID "Project ID 붙여넣기"
-  save_state QS_INFISICAL_PROJECT_ID "$QS_INFISICAL_PROJECT_ID"
 fi
+save_state QS_INFISICAL_PROJECT_ID "$QS_INFISICAL_PROJECT_ID"
 QS_INFISICAL_ENV="${QS_INFISICAL_ENV:-prod}"; save_state QS_INFISICAL_ENV "$QS_INFISICAL_ENV"
 QS_INFISICAL_PATH="${QS_INFISICAL_PATH:-/hermes}"; save_state QS_INFISICAL_PATH "$QS_INFISICAL_PATH"
 infisical secrets folders create --projectId "$QS_INFISICAL_PROJECT_ID" --env "$QS_INFISICAL_ENV" \
@@ -145,6 +157,11 @@ hp slack manifest --name "$QS_BOT_NAME" --write "$MANIFEST" >/dev/null
 python3 "$QS_DIR/lib/manifest_patch.py" "$MANIFEST"
 if [ -z "${QS_SLACK_DONE:-}" ]; then
   pbcopy < "$MANIFEST" 2>/dev/null || true
+  has_tty || need_human "Slack 앱 만들기 (매니페스트: $MANIFEST — 클립보드에 복사됨):" \
+    "  1) https://api.slack.com/apps → Create New App → From a manifest → 워크스페이스 선택 → 붙여넣기" \
+    "  2) Basic Information → App-Level Tokens → Generate (scope: connections:write)" \
+    "  3) Install App → Install to Workspace" \
+    "  그 다음 터미널에서 ./install.sh 를 실행하면 토큰 2개를 (화면에 안 보이게) 물어봅니다."
   cat <<EOF
 
   [첫 번째(본인) 워크스페이스]
@@ -159,7 +176,7 @@ EOF
   read_secret BOT_TOKEN "Bot User OAuth Token (xoxb-…)"
   [[ "$APP_TOKEN" == xapp-* ]] || die "xapp- 로 시작해야 합니다"
   [[ "$BOT_TOKEN" == xoxb-* ]] || die "xoxb- 로 시작해야 합니다"
-  ask MEMBER_ID "내 Slack Member ID (U…)"
+  MEMBER_ID="${QS_SLACK_MEMBER_ID:-}"; ask MEMBER_ID "내 Slack Member ID (U…)"
   infisical_set SLACK_APP_TOKEN "$APP_TOKEN"
   infisical_set SLACK_BOT_TOKEN "$BOT_TOKEN"
   unset APP_TOKEN BOT_TOKEN
