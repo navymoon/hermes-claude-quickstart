@@ -1,0 +1,5 @@
+.env
+*.env.local
+state.env
+slack-manifest.json
+.DS_Store

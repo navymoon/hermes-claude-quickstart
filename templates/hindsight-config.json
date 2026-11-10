@@ -1,0 +1,17 @@
+{
+  "mode": "local_external",
+  "api_url": "http://127.0.0.1:{{PORT}}",
+  "bank_id": "{{PROFILE}}",
+  "memory_mode": "hybrid",
+  "auto_recall": true,
+  "auto_retain": true,
+  "recall_sync": true,
+  "recall_budget": "mid",
+  "recall_types": "observation,world,experience",
+  "retain_source": "hermes",
+  "retain_tags": ["source:hermes"],
+  "retain_context": "conversation between Hermes Agent ({{BOT_NAME}}) and the User (Korean)",
+  "retain_cron": false,
+  "retain_async": true,
+  "recall_max_input_chars": 500
+}
